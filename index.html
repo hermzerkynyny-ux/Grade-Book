@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>📒 Student Gradebook System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  /* ── Reset & Tokens ─────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:      #1a1a2e;
+    --paper:    #f5f0e8;
+    --cream:    #ede8dc;
+    --rule:     #c8bfaa;
+    --accent:   #c84b31;
+    --gold:     #d4a843;
+    --sage:     #4a7c59;
+    --sky:      #3a6b8a;
+    --muted:    #7a7060;
+    --shadow:   rgba(26,26,46,.12);
+
+    --r: 6px;
+    --ff-serif: 'DM Serif Display', Georgia, serif;
+    --ff-sans:  'Instrument Sans', sans-serif;
+    --ff-mono:  'DM Mono', monospace;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--ff-sans);
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 27px, var(--rule) 27px, var(--rule) 28px),
+      repeating-linear-gradient(90deg, transparent, transparent 27px, rgba(200,191,170,.3) 27px, rgba(200,191,170,.3) 28px);
+    background-size: 28px 28px;
+  }
+
+  /* ── App Shell ──────────────────────────────────────── */
+  #app {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+    animation: fadeUp .5s ease both;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(16px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── Header ─────────────────────────────────────────── */
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 3px double var(--ink);
+    padding-bottom: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .logo { line-height: 1; }
+  .logo-emoji { font-size: 2.4rem; }
+  .logo h1 {
+    font-family: var(--ff-serif);
+    font-size: 2rem;
+    letter-spacing: -.5px;
+    color: var(--ink);
+  }
+  .logo p { font-size: .75rem; color: var(--muted); font-family: var(--ff-mono); margin-top: 2px; }
+
+  .stats-bar {
+    display: flex; gap: 20px;
+  }
+  .stat {
+    text-align: center;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 8px 16px;
+    border-radius: var(--r);
+    min-width: 72px;
+  }
+
+  .stat-n { font-family: var(--ff-serif); font-size: 1.5rem; line-height: 1; }
+  .stat-l { font-size: .65rem; font-family: var(--ff-mono); text-transform: uppercase; letter-spacing:.05em; opacity:.7; margin-top: 2px; }
+
+  /* ── Nav Tabs ────────────────────────────────────────── */
+  nav {
+    display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .tab {
+    font-family: var(--ff-sans); font-size: .85rem; font-weight: 500;
+    padding: 8px 18px;
+    border: 1.5px solid var(--rule);
+    border-radius: var(--r) var(--r) 0 0;
+    background: var(--cream);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .18s;
+    border-bottom-color: transparent;
+  }
+  .tab:hover { color: var(--ink); background: var(--paper); }
+  .tab.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+
+  /* ── Panels ──────────────────────────────────────────── */
+  .panel {
+    display: none;
+    background: rgba(255,255,255,.6);
+    border: 1.5px solid var(--rule);
+    border-radius: 0 var(--r) var(--r) var(--r);
+    padding: 28px;
+    backdrop-filter: blur(4px);
+    box-shadow: 0 4px 24px var(--shadow);
+    animation: fadeIn .25s ease;
+  }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+
+  .panel-title {
+    font-family: var(--ff-serif);
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+    color: var(--ink);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .panel-title::after {
+    content:''; flex:1; height:1px; background: var(--rule);
+  }
+
+  /* ── Form Grid ───────────────────────────────────────── */
+  .form-row {
+    display: flex; gap: 10px; margin-bottom: 16px; align-items: flex-end; flex-wrap: wrap;
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 140px; }
+  .field label { font-size: .72rem; font-family: var(--ff-mono); text-transform: uppercase; letter-spacing:.07em; color: var(--muted); }
+
+  input, select {
+    font-family: var(--ff-sans); font-size: .9rem;
+    padding: 9px 12px;
+    border: 1.5px solid var(--rule);
+    border-radius: var(--r);
+    background: var(--paper);
+    color: var(--ink);
+    outline: none;
+    transition: border-color .15s;
+    width: 100%;
+  }
+  input:focus, select:focus { border-color: var(--ink); }
+
+  /* ── Buttons ─────────────────────────────────────────── */
+  .btn {
+    font-family: var(--ff-sans); font-weight: 600; font-size: .85rem;
+    padding: 9px 20px;
+    border: none; border-radius: var(--r);
+    cursor: pointer; transition: all .15s; white-space: nowrap;
+  }
+  .btn-primary { background: var(--ink); color: var(--paper); }
+  .btn-primary:hover { background: #2e2e50; transform: translateY(-1px); box-shadow: 0 4px 12px var(--shadow); }
+  .btn-accent  { background: var(--accent); color: #fff; }
+  .btn-accent:hover  { filter: brightness(1.1); }
+  .btn-sage    { background: var(--sage); color: #fff; }
+  .btn-sage:hover    { filter: brightness(1.1); }
+  .btn-ghost   { background: transparent; color: var(--muted); border: 1.5px solid var(--rule); }
+  .btn-ghost:hover   { border-color: var(--ink); color: var(--ink); }
+  .btn-danger  { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); font-size: .78rem; padding: 5px 10px; }
+  .btn-danger:hover  { background: var(--accent); color: #fff; }
+
+  /* ── Toast ───────────────────────────────────────────── */
+  #toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--ink); color: var(--paper);
+    padding: 10px 22px; border-radius: 40px;
+    font-size: .85rem; font-family: var(--ff-mono);
+    box-shadow: 0 6px 24px rgba(0,0,0,.25);
+    transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s;
+    opacity: 0; pointer-events: none; z-index: 999;
+    white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  #toast.error { background: var(--accent); }
+  #toast.success { background: var(--sage); }
+
+  /* ── Lists ───────────────────────────────────────────── */
+  .list-grid {
+    display: grid; gap: 8px; margin-top: 16px;
+  }
+  .list-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--cream);
+    border-radius: var(--r);
+    border-left: 3px solid var(--rule);
+    font-size: .88rem;
+    transition: border-color .15s;
+  }
+  .list-item:hover { border-left-color: var(--gold); }
+  .list-item-info { display: flex; flex-direction: column; gap: 2px; }
+  .list-item-name { font-weight: 600; }
+  .list-item-meta { font-size: .72rem; color: var(--muted); font-family: var(--ff-mono); }
+
+  /* ── Divider ─────────────────────────────────────────── */
+  .divider { border: none; border-top: 1px dashed var(--rule); margin: 22px 0; }
+
+  /* ── Grade Badge ─────────────────────────────────────── */
+  .grade-badge {
+    display: inline-block; font-family: var(--ff-mono); font-size: .75rem; font-weight: 500;
+    padding: 2px 8px; border-radius: 4px; min-width: 28px; text-align: center;
+  }
+  .A { background: #d4edda; color: #1a5c2e; }
+  .B { background: #cce5ff; color: #0c4a7a; }
+  .C { background: #fff3cd; color: #7a5c0c; }
+  .D { background: #ffe0cc; color: #7a3c0c; }
+  .F { background: #f8d7da; color: #721c24; }
+  .NA{ background: var(--cream); color: var(--muted); }
+
+  /* ── Report Card ─────────────────────────────────────── */
+  .report-card {
+    background: #fff;
+    border: 2px solid var(--ink);
+    border-radius: var(--r);
+    overflow: hidden;
+    box-shadow: 6px 6px 0 var(--ink);
+    margin-top: 20px;
+  }
+  .report-header {
+    background: var(--ink); color: var(--paper);
+    padding: 16px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .report-header h3 { font-family: var(--ff-serif); font-size: 1.3rem; }
+  .report-header p  { font-family: var(--ff-mono); font-size: .75rem; opacity: .7; margin-top:2px; }
+  .report-avg { text-align:right; }
+  .report-avg-num { font-family: var(--ff-serif); font-size: 2rem; line-height:1; }
+  .report-avg-lbl { font-size: .65rem; font-family: var(--ff-mono); opacity: .6; }
+
+  .report-table { width: 100%; border-collapse: collapse; }
+  .report-table th {
+    font-family: var(--ff-mono); font-size: .7rem; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--muted);
+    padding: 10px 16px; text-align: left;
+    border-bottom: 1px solid var(--rule); background: var(--cream);
+  }
+  .report-table td {
+    padding: 10px 16px; border-bottom: 1px solid var(--cream);
+    font-size: .88rem;
+  }
+  .report-table tr:last-child td { border-bottom: none; }
+  .report-table tr:hover td { background: rgba(212,168,67,.06); }
+  .score-bar-wrap { display:flex; align-items:center; gap:10px; }
+  .score-bar {
+    flex:1; height:6px; background: var(--cream);
+    border-radius: 3px; overflow:hidden; max-width: 120px;
+  }
+  .score-bar-fill { height:100%; border-radius:3px; transition: width .6s ease; }
+
+  /* ── Class Gradebook Table ───────────────────────────── */
+  .gb-wrap { overflow-x: auto; margin-top: 16px; }
+  .gb-table {
+    width: 100%; border-collapse: collapse; font-size: .82rem;
+    border: 1.5px solid var(--rule);
+    border-radius: var(--r); overflow:hidden;
+  }
+  .gb-table th {
+    background: var(--ink); color: var(--paper);
+    padding: 10px 12px; text-align:center;
+    font-family: var(--ff-mono); font-size: .68rem;
+    text-transform: uppercase; letter-spacing: .06em;
+    white-space: nowrap;
+  }
+  .gb-table th:first-child { text-align:left; min-width:130px; }
+  .gb-table td {
+    padding: 9px 12px; border-bottom: 1px solid var(--cream);
+    text-align: center; font-family: var(--ff-mono);
+  }
+  .gb-table td:first-child { text-align:left; font-family: var(--ff-sans); font-weight:500; }
+  .gb-table tr:nth-child(even) td { background: rgba(237,232,220,.4); }
+  .gb-table tr:hover td { background: rgba(212,168,67,.1); }
+  .gb-table tr.avg-row td { background: var(--cream); font-weight:600; border-top: 2px solid var(--rule); }
+
+  /* ── Progress ring ───────────────────────────────────── */
+  .ring-wrap { display:flex; align-items:center; gap: 24px; flex-wrap:wrap; margin-top: 8px; }
+  .ring-card {
+    background: var(--cream);
+    border-radius: var(--r); padding: 14px 18px;
+    display:flex; align-items:center; gap: 12px;
+    border: 1px solid var(--rule);
+  }
+  .ring-card svg { width:52px; height:52px; }
+  .ring-card .ring-info { }
+  .ring-card .ring-label { font-size:.7rem; font-family:var(--ff-mono); text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
+  .ring-card .ring-value { font-family:var(--ff-serif); font-size:1.4rem; line-height:1; margin-top:2px; }
+  .ring-card .ring-grade { font-size:.75rem; color:var(--muted); margin-top:1px; }
+
+  /* ── Empty state ─────────────────────────────────────── */
+  .empty {
+    text-align:center; padding: 40px 20px;
+    font-family: var(--ff-mono); color: var(--muted); font-size:.85rem;
+  }
+  .empty .empty-icon { font-size:2.5rem; margin-bottom:10px; }
+
+  /* ── Demo button ─────────────────────────────────────── */
+  .demo-badge {
+    display:inline-flex; align-items:center; gap:6px;
+    background: var(--gold); color: var(--ink);
+    padding: 6px 14px; border-radius: 40px;
+    font-size:.75rem; font-family:var(--ff-mono); font-weight:500;
+    cursor:pointer; border:none; transition: filter .15s;
+  }
+  .demo-badge:hover { filter:brightness(1.05); }
+
+  /* responsive */
+  @media(max-width:600px){
+    .stats-bar { gap:8px; }
+    .stat { min-width:56px; padding:6px 10px; }
+    .panel { padding:18px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo">
+      <div class="logo-emoji">📒</div>
+      <h1>Student Gradebook</h1>
+      <p>Project 5 — Teacher Dashboard</p>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
+      <button class="demo-badge" onclick="loadDemo()">⚡ Load Demo Data</button>
+      <div class="stats-bar">
+        <div class="stat"><div class="stat-n" id="stat-students">0</div><div class="stat-l">Students</div></div>
+        <div class="stat"><div class="stat-n" id="stat-assignments">0</div><div class="stat-l">Assignments</div></div>
+        <div class="stat"><div class="stat-n" id="stat-avg">—</div><div class="stat-l">Class Avg</div></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Tabs ── -->
+  <nav>
+    <button class="tab active" onclick="switchTab('students')">👤 Students</button>
+    <button class="tab" onclick="switchTab('assignments')">📝 Assignments</button>
+    <button class="tab" onclick="switchTab('grades')">✏️ Record Grades</button>
+    <button class="tab" onclick="switchTab('report')">📊 Reports</button>
+    <button class="tab" onclick="switchTab('gradebook')">📋 Class Gradebook</button>
+  </nav>
+
+  <!-- ═══════════════ STUDENTS PANEL ═══════════════ -->
+  <div class="panel active" id="panel-students">
+    <div class="panel-title">Manage Students</div>
+    <div class="form-row">
+      <div class="field">
+        <label>Student Full Name</label>
+        <input id="in-student-name" type="text" placeholder="e.g. Alice Johnson" onkeydown="if(event.key==='Enter')addStudent()"/>
+      </div>
+      <button class="btn btn-primary" onclick="addStudent()">＋ Add Student</button>
+    </div>
+    <div class="list-grid" id="student-list">
+      <div class="empty"><div class="empty-icon">👤</div>No students yet. Add your first student above.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ ASSIGNMENTS PANEL ═══════════════ -->
+  <div class="panel" id="panel-assignments">
+    <div class="panel-title">Manage Assignments</div>
+    <div class="form-row">
+      <div class="field">
+        <label>Assignment Title</label>
+        <input id="in-assignment-title" type="text" placeholder="e.g. Midterm Exam" onkeydown="if(event.key==='Enter')addAssignment()"/>
+      </div>
+      <div class="field" style="max-width:130px;">
+        <label>Max Points</label>
+        <input id="in-assignment-max" type="number" placeholder="100" min="1" max="1000" value="100"/>
+      </div>
+      <button class="btn btn-primary" onclick="addAssignment()">＋ Add Assignment</button>
+    </div>
+    <div class="list-grid" id="assignment-list">
+      <div class="empty"><div class="empty-icon">📝</div>No assignments yet.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ GRADES PANEL ═══════════════ -->
+  <div class="panel" id="panel-grades">
+    <div class="panel-title">Record Grades</div>
+    <div class="form-row">
+      <div class="field">
+        <label>Student</label>
+        <select id="sel-grade-student"><option value="">— select student —</option></select>
+      </div>
+      <div class="field">
+        <label>Assignment</label>
+        <select id="sel-grade-assignment"><option value="">— select assignment —</option></select>
+      </div>
+      <div class="field" style="max-width:120px;">
+        <label>Score</label>
+        <input id="in-grade-score" type="number" placeholder="0–100" min="0" max="100" step="0.1" onkeydown="if(event.key==='Enter')recordGrade()"/>
+      </div>
+      <button class="btn btn-accent" onclick="recordGrade()">✓ Save Grade</button>
+    </div>
+
+    <hr class="divider"/>
+    <div class="panel-title" style="font-size:1rem;">Bulk Grade Entry</div>
+    <p style="font-size:.82rem;color:var(--muted);margin-bottom:14px;">Select an assignment and enter scores for every student at once.</p>
+    <div class="form-row">
+      <div class="field">
+        <label>Assignment</label>
+        <select id="sel-bulk-assignment" onchange="renderBulkForm()"><option value="">— select assignment —</option></select>
+      </div>
+    </div>
+    <div id="bulk-form"></div>
+    <div id="bulk-submit" style="display:none;margin-top:14px;">
+      <button class="btn btn-sage" onclick="saveBulkGrades()">✓ Save All Grades</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ REPORT PANEL ═══════════════ -->
+  <div class="panel" id="panel-report">
+    <div class="panel-title">Student Report Card</div>
+    <div class="form-row">
+      <div class="field">
+        <label>Select Student</label>
+        <select id="sel-report-student" onchange="renderReport()"><option value="">— select student —</option></select>
+      </div>
+    </div>
+    <div id="report-output">
+      <div class="empty"><div class="empty-icon">📊</div>Select a student to view their report card.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ GRADEBOOK PANEL ═══════════════ -->
+  <div class="panel" id="panel-gradebook">
+    <div class="panel-title">Class Gradebook</div>
+    <div id="gradebook-output">
+      <div class="empty"><div class="empty-icon">📋</div>Add students and assignments to see the gradebook.</div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+/* ══════════════════════════════════════════════
+   DATA STORE
+══════════════════════════════════════════════ */
+const DB = {
+  students: [],       // [{id, name}]
+  assignments: [],    // [{id, title, max}]
+  grades: {},         // {"studentId_assignmentId": score}
+  _sid: 1, _aid: 1,
+
+  addStudent(name) {
+    if (!name.trim()) return false;
+    const n = name.trim().replace(/\b\w/g,c=>c.toUpperCase());
+    if (this.students.find(s=>s.name===n)) return 'dup';
+    this.students.push({id:this._sid++, name:n});
+    return true;
+  },
+  removeStudent(id) {
+    this.students = this.students.filter(s=>s.id!==id);
+    Object.keys(this.grades).filter(k=>k.startsWith(id+'_')).forEach(k=>delete this.grades[k]);
+  },
+  addAssignment(title, max=100) {
+    if (!title.trim()) return false;
+    const t = title.trim();
+    if (this.assignments.find(a=>a.title===t)) return 'dup';
+    this.assignments.push({id:this._aid++, title:t, max:+max});
+    return true;
+  },
+  removeAssignment(id) {
+    this.assignments = this.assignments.filter(a=>a.id!==id);
+    Object.keys(this.grades).filter(k=>k.endsWith('_'+id)).forEach(k=>delete this.grades[k]);
+  },
+  setGrade(sid, aid, score) {
+    this.grades[`${sid}_${aid}`] = score;
+  },
+  getGrade(sid, aid) {
+    const v = this.grades[`${sid}_${aid}`];
+    return v === undefined ? null : v;
+  },
+  studentAvg(sid) {
+    const scores = this.assignments.map(a=>this.getGrade(sid,a.id)).filter(v=>v!==null);
+    if (!scores.length) return null;
+    return scores.reduce((a,b)=>a+b,0)/scores.length;
+  },
+  assignmentAvg(aid) {
+    const scores = this.students.map(s=>this.getGrade(s.id,aid)).filter(v=>v!==null);
+    if (!scores.length) return null;
+    return scores.reduce((a,b)=>a+b,0)/scores.length;
+  },
+  classAvg() {
+    const all = Object.values(this.grades);
+    if (!all.length) return null;
+    return all.reduce((a,b)=>a+b,0)/all.length;
+  }
+};
+
+/* ══════════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════════ */
+function letterGrade(score) {
+  if (score===null||score===undefined) return 'NA';
+  if (score>=90) return 'A'; if (score>=80) return 'B';
+  if (score>=70) return 'C'; if (score>=60) return 'D'; return 'F';
+}
+function gradeColor(score) {
+  if (score>=90) return '#2d8c4e'; if (score>=80) return '#1d6fa5';
+  if (score>=70) return '#c47f17'; if (score>=60) return '#c05621'; return '#c0392b';
+}
+function badge(score) {
+  const lg = letterGrade(score);
+  const display = score===null ? '—' : score.toFixed(1);
+  return `<span class="grade-badge ${lg}">${display} ${lg==='NA'?'':lg}</span>`;
+}
+function toast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `show ${type}`;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.className=''; },2800);
+}
+function scoreBarColor(s) {
+  if(s>=90) return '#2d8c4e'; if(s>=80) return '#1d6fa5';
+  if(s>=70) return '#c47f17'; if(s>=60) return '#c05621'; return '#c0392b';
+}
+function miniRing(pct, color) {
+  const r=20, c=2*Math.PI*r, dash=pct/100*c;
+  return `<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="${r}" fill="none" stroke="#e5e0d5" stroke-width="5"/>
+  <circle cx="24" cy="24" r="${r}" fill="none" stroke="${color}" stroke-width="5"
+    stroke-dasharray="${dash} ${c}" stroke-dashoffset="${c/4}" stroke-linecap="round" transform="rotate(-90 24 24)"/>
+  </svg>`;
+}
+
+/* ══════════════════════════════════════════════
+   TAB SWITCHING
+══════════════════════════════════════════════ */
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const names=['students','assignments','grades','report','gradebook'];
+    t.classList.toggle('active', names[i]===name);
+  });
+  document.querySelectorAll('.panel').forEach(p=>{
+    p.classList.toggle('active', p.id==='panel-'+name);
+  });
+  if(name==='report') renderReport();
+  if(name==='gradebook') renderGradebook();
+  if(name==='grades') { populateGradeSelects(); renderBulkForm(); }
+}
+
+/* ══════════════════════════════════════════════
+   STUDENTS
+══════════════════════════════════════════════ */
+function addStudent() {
+  const v = document.getElementById('in-student-name').value;
+  const res = DB.addStudent(v);
+  if (res==='dup') { toast('Student already exists!','error'); return; }
+  if (!res) { toast('Enter a name first.','error'); return; }
+  document.getElementById('in-student-name').value='';
+  toast(`✓ Added ${v.trim()}`);
+  renderStudents(); updateStats(); populateGradeSelects();
+}
+function removeStudent(id) {
+  const s = DB.students.find(s=>s.id===id);
+  DB.removeStudent(id);
+  toast(`Removed ${s?.name||'student'}`,'error');
+  renderStudents(); updateStats(); populateGradeSelects();
+  renderReport(); renderGradebook();
+}
+function renderStudents() {
+  const el = document.getElementById('student-list');
+  if (!DB.students.length) {
+    el.innerHTML='<div class="empty"><div class="empty-icon">👤</div>No students yet. Add your first student above.</div>'; return;
+  }
+  el.innerHTML = DB.students.map(s=>{
+    const avg = DB.studentAvg(s.id);
+    const lg = letterGrade(avg);
+    return `<div class="list-item">
+      <div class="list-item-info">
+        <div class="list-item-name">${s.name}</div>
+        <div class="list-item-meta">ID #${s.id} · ${DB.assignments.filter(a=>DB.getGrade(s.id,a.id)!==null).length}/${DB.assignments.length} graded</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        ${badge(avg)}
+        <button class="btn btn-danger" onclick="removeStudent(${s.id})">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════
+   ASSIGNMENTS
+══════════════════════════════════════════════ */
+function addAssignment() {
+  const t = document.getElementById('in-assignment-title').value;
+  const m = document.getElementById('in-assignment-max').value || 100;
+  const res = DB.addAssignment(t, m);
+  if (res==='dup') { toast('Assignment already exists!','error'); return; }
+  if (!res) { toast('Enter a title first.','error'); return; }
+  document.getElementById('in-assignment-title').value='';
+  document.getElementById('in-assignment-max').value='100';
+  toast(`✓ Added assignment: ${t.trim()}`);
+  renderAssignments(); renderStudents(); updateStats(); populateGradeSelects();
+}
+function removeAssignment(id) {
+  const a = DB.assignments.find(a=>a.id===id);
+  DB.removeAssignment(id);
+  toast(`Removed assignment: ${a?.title||''}`,'error');
+  renderAssignments(); renderStudents(); updateStats(); populateGradeSelects();
+  renderReport(); renderGradebook();
+}
+function renderAssignments() {
+  const el = document.getElementById('assignment-list');
+  if (!DB.assignments.length) {
+    el.innerHTML='<div class="empty"><div class="empty-icon">📝</div>No assignments yet.</div>'; return;
+  }
+  el.innerHTML = DB.assignments.map(a=>{
+    const avg = DB.assignmentAvg(a.id);
+    const graded = DB.students.filter(s=>DB.getGrade(s.id,a.id)!==null).length;
+    return `<div class="list-item">
+      <div class="list-item-info">
+        <div class="list-item-name">${a.title}</div>
+        <div class="list-item-meta">Max: ${a.max} pts · ${graded}/${DB.students.length} graded</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        ${badge(avg)}
+        <button class="btn btn-danger" onclick="removeAssignment(${a.id})">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ══════════════════════════════════════════════
+   GRADES
+══════════════════════════════════════════════ */
+function populateGradeSelects() {
+  ['sel-grade-student','sel-report-student'].forEach(id=>{
+    const el = document.getElementById(id);
+    const prev = el.value;
+    el.innerHTML = '<option value="">— select student —</option>' +
+      DB.students.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    if (DB.students.find(s=>s.id==prev)) el.value=prev;
+  });
+  ['sel-grade-assignment','sel-bulk-assignment'].forEach(id=>{
+    const el = document.getElementById(id);
+    const prev = el.value;
+    el.innerHTML = '<option value="">— select assignment —</option>' +
+      DB.assignments.map(a=>`<option value="${a.id}">${a.title}</option>`).join('');
+    if (DB.assignments.find(a=>a.id==prev)) el.value=prev;
+  });
+}
+function recordGrade() {
+  const sid=+document.getElementById('sel-grade-student').value;
+  const aid=+document.getElementById('sel-grade-assignment').value;
+  const score=parseFloat(document.getElementById('in-grade-score').value);
+  if (!sid||!aid) { toast('Select a student and assignment.','error'); return; }
+  if (isNaN(score)||score<0||score>100) { toast('Score must be 0–100.','error'); return; }
+  DB.setGrade(sid,aid,score);
+  document.getElementById('in-grade-score').value='';
+  const s=DB.students.find(s=>s.id===sid); const a=DB.assignments.find(a=>a.id===aid);
+  toast(`✓ ${s.name} — ${a.title}: ${score.toFixed(1)} (${letterGrade(score)})`);
+  renderStudents(); updateStats(); renderBulkForm();
+}
+function renderBulkForm() {
+  const aid = +document.getElementById('sel-bulk-assignment').value;
+  const form = document.getElementById('bulk-form');
+  const sub = document.getElementById('bulk-submit');
+  if (!aid) { form.innerHTML=''; sub.style.display='none'; return; }
+  if (!DB.students.length) { form.innerHTML='<p style="color:var(--muted);font-size:.82rem;">No students enrolled.</p>'; sub.style.display='none'; return; }
+  const a = DB.assignments.find(a=>a.id===aid);
+  sub.style.display='block';
+  form.innerHTML = `<div class="list-grid">${DB.students.map(s=>{
+    const cur = DB.getGrade(s.id,aid);
+    return `<div class="list-item">
+      <div class="list-item-info">
+        <div class="list-item-name">${s.name}</div>
+        <div class="list-item-meta">Current: ${cur===null?'not graded':cur.toFixed(1)}</div>
+      </div>
+      <input type="number" placeholder="score" min="0" max="100" step="0.1"
+        value="${cur===null?'':cur}"
+        id="bulk_${s.id}_${aid}"
+        style="width:90px;text-align:center;"/>
+    </div>`;
+  }).join('')}</div>`;
+}
+function saveBulkGrades() {
+  const aid = +document.getElementById('sel-bulk-assignment').value;
+  if (!aid) return;
+  let saved=0;
+  DB.students.forEach(s=>{
+    const el = document.getElementById(`bulk_${s.id}_${aid}`);
+    if (!el||el.value==='') return;
+    const v=parseFloat(el.value);
+    if (!isNaN(v)&&v>=0&&v<=100) { DB.setGrade(s.id,aid,v); saved++; }
+  });
+  toast(`✓ Saved ${saved} grade${saved!==1?'s':''}`);
+  renderStudents(); updateStats(); renderBulkForm();
+}
+
+/* ══════════════════════════════════════════════
+   REPORT
+══════════════════════════════════════════════ */
+function renderReport() {
+  const sid=+document.getElementById('sel-report-student').value;
+  const out=document.getElementById('report-output');
+  if (!sid) { out.innerHTML='<div class="empty"><div class="empty-icon">📊</div>Select a student to view their report card.</div>'; return; }
+  const s=DB.students.find(s=>s.id===sid);
+  const avg=DB.studentAvg(sid);
+  const lg=letterGrade(avg);
+  const color=gradeColor(avg);
+  const graded=DB.assignments.filter(a=>DB.getGrade(sid,a.id)!==null).length;
+
+  let rows='';
+  if (!DB.assignments.length) {
+    rows='<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px;">No assignments yet.</td></tr>';
+  } else {
+    rows=DB.assignments.map(a=>{
+      const score=DB.getGrade(sid,a.id);
+      const pct=score===null?0:score;
+      const barColor=scoreBarColor(score??0);
+      return `<tr>
+        <td>${a.title}</td>
+        <td>${score===null?'<span style="color:var(--muted)">—</span>':score.toFixed(1)}</td>
+        <td><div class="score-bar-wrap">
+          <div class="score-bar"><div class="score-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+        </div></td>
+        <td>${badge(score)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  out.innerHTML=`<div class="report-card">
+    <div class="report-header">
+      <div>
+        <h3>${s.name}</h3>
+        <p>Student ID #${s.id} · ${graded}/${DB.assignments.length} assignments graded</p>
+      </div>
+      <div class="report-avg">
+        <div class="report-avg-num" style="color:${avg!==null?color:'var(--paper)'}">${avg!==null?avg.toFixed(1):'—'}</div>
+        <div class="report-avg-lbl">${avg!==null?`Grade: ${lg}`:'No grades yet'}</div>
+      </div>
+    </div>
+    <table class="report-table">
+      <thead><tr><th>Assignment</th><th>Score</th><th>Progress</th><th>Grade</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════
+   CLASS GRADEBOOK
+══════════════════════════════════════════════ */
+function renderGradebook() {
+  const out=document.getElementById('gradebook-output');
+  if (!DB.students.length||!DB.assignments.length) {
+    out.innerHTML='<div class="empty"><div class="empty-icon">📋</div>Add students and assignments to see the class gradebook.</div>'; return;
+  }
+
+  // Summary rings
+  const ca=DB.classAvg();
+  const rings=DB.assignments.map(a=>{
+    const av=DB.assignmentAvg(a.id);
+    const color=av!==null?gradeColor(av):'#ccc';
+    return `<div class="ring-card">
+      ${miniRing(av??0,color)}
+      <div class="ring-info">
+        <div class="ring-label">${a.title.length>14?a.title.slice(0,13)+'…':a.title}</div>
+        <div class="ring-value" style="color:${color}">${av!==null?av.toFixed(1):'—'}</div>
+        <div class="ring-grade">${av!==null?'Class avg':'No data'}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Table
+  const headerCells=DB.assignments.map(a=>`<th title="${a.title}">${a.title.length>8?a.title.slice(0,7)+'…':a.title}</th>`).join('');
+  const rows=[...DB.students].sort((a,b)=>a.name.localeCompare(b.name)).map(s=>{
+    const avg=DB.studentAvg(s.id);
+    const cells=DB.assignments.map(a=>{
+      const sc=DB.getGrade(s.id,a.id);
+      return `<td>${sc===null?'<span style="color:var(--muted)">—</span>':badge(sc)}</td>`;
+    }).join('');
+    return `<tr><td>${s.name}</td>${cells}<td>${badge(avg)}</td></tr>`;
+  }).join('');
+
+  const avgCells=DB.assignments.map(a=>{
+    const av=DB.assignmentAvg(a.id);
+    return `<td>${badge(av)}</td>`;
+  }).join('');
+
+  out.innerHTML=`
+    <div class="ring-wrap">${rings}</div>
+    <div class="gb-wrap" style="margin-top:20px;">
+      <table class="gb-table">
+        <thead><tr><th>Student</th>${headerCells}<th>Average</th></tr></thead>
+        <tbody>
+          ${rows}
+          <tr class="avg-row"><td>Class Average</td>${avgCells}<td>${badge(ca)}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════
+   STATS BAR
+══════════════════════════════════════════════ */
+function updateStats() {
+  document.getElementById('stat-students').textContent=DB.students.length;
+  document.getElementById('stat-assignments').textContent=DB.assignments.length;
+  const ca=DB.classAvg();
+  document.getElementById('stat-avg').textContent=ca!==null?ca.toFixed(1)+'%':'—';
+}
+
+/* ══════════════════════════════════════════════
+   DEMO DATA
+══════════════════════════════════════════════ */
+function loadDemo() {
+  // Reset
+  DB.students=[]; DB.assignments=[]; DB.grades={}; DB._sid=1; DB._aid=1;
+
+  const names=['Kinene Hamza','Namukwaya Rashiidah','Nabatanzi Haniifah','Nalumansi Carol','Kizito Noran Abraham','Ssemakula Swaibu'];
+  const assignments=[['Quiz 1',100],['Homework 1',100],['Midterm',100],['Homework 2',100],['Lab Report',100],['Final Exam',100]];
+  const scores={
+    'Kinene Hamza':  [89,98,90,92,87,96],
+    'Namukwaya Rashiidah':   [100,98,99,97,80,100],
+    'Nalumansi Carol':     [80,96,78,97,89,99],
+    'Nabatanzi Haniifah':      [100,95,80,68,100,92],
+    'Kizito Noran Abraham':      [86,85,84,87,82,91],
+    'Ssemakula Swaibu':   [100,90,85,92,100,98],
+  };
+
+  names.forEach(n=>DB.addStudent(n));
+  assignments.forEach(([t,m])=>DB.addAssignment(t,m));
+
+  names.forEach(name=>{
+    const s=DB.students.find(s=>s.name===name);
+    assignments.forEach(([title],i)=>{
+      const a=DB.assignments.find(a=>a.title===title);
+      DB.setGrade(s.id,a.id,scores[name][i]);
+    });
+  });
+
+  renderStudents(); renderAssignments(); populateGradeSelects();
+  renderReport(); renderGradebook(); updateStats();
+  toast('⚡ Demo data loaded — 6 students, 6 assignments!');
+}
+
+/* ══════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════ */
+updateStats();
+</script>
+<footer>Kinene Hamza 0705079748</footer>
+</body>
+</html>
